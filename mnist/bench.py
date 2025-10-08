@@ -78,7 +78,7 @@ def train_with_lma(
 
             # Print the result
             print(
-                f"Epoch {epoch} Batch {idx}: Average loss {test_loss:10.3e}, Accuracy {test_acc}%, Time {t_cur:10.3} seconds"
+                f"Epoch {epoch} Batch {idx}: Average loss {test_loss:10.3e}, Accuracy {test_acc:5.2}%, Time {t_cur:6.3} seconds"
             )
 
             if terminated:
@@ -116,7 +116,7 @@ def train_with_adam(model, train_loader, test_loader, num_epochs, lr, device):
         acc_values.append(test_acc)
 
         print(
-            f"Epoch {epoch}: Average loss {test_loss:10.3e}, Accuracy {test_acc}%, Time {t_cur:10.3} seconds"
+            f"Epoch {epoch}: Average loss {test_loss:10.3e}, Accuracy {test_acc:5.2}%, Time {t_cur:6.3} seconds"
         )
 
     return timestamps, loss_values, acc_values
