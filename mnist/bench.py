@@ -35,6 +35,7 @@ class SimpleCNN(torch.nn.Module):
 
 
 def test(model, test_loader, device):
+    model.eval()
     test_loss = 0
     correct = 0
     with torch.no_grad():
@@ -65,6 +66,7 @@ def train_with_lma(
     t_all = 0
     for epoch in range(1, num_epochs + 1):
         for idx, (x, y) in enumerate(train_loader):
+            model.train()
             t_start = time()
             loss, terminated = lma.step(x, y, slice_size=slice_size)
             t_cur = (time() - t_start) / 1e6
@@ -78,7 +80,7 @@ def train_with_lma(
 
             # Print the result
             print(
-                f"Epoch {epoch} Batch {idx}: Average loss {test_loss:10.3e}, Accuracy {test_acc:5.2}%, Time {t_cur:6.3} seconds"
+                f"Epoch {epoch} Batch {idx}: Average loss {test_loss:10.3e}, Accuracy {test_acc:5.2f}%, Time {t_cur:6.3} seconds"
             )
 
             if terminated:
@@ -97,12 +99,13 @@ def train_with_adam(model, train_loader, test_loader, num_epochs, lr, device):
     timestamps, loss_values, acc_values = [], [], []
     t_all = 0
     for epoch in range(1, num_epochs + 1):
+        model.train()
         t_start = perf_counter()
         for data, target in train_loader:
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             output = model(data)
-            loss = F.nll_loss(output, target)
+            loss = F.cross_entropy(output, target)
             loss.backward()
             optimizer.step()
         torch.cuda.synchronize()
@@ -116,7 +119,7 @@ def train_with_adam(model, train_loader, test_loader, num_epochs, lr, device):
         acc_values.append(test_acc)
 
         print(
-            f"Epoch {epoch}: Average loss {test_loss:10.3e}, Accuracy {test_acc:5.2}%, Time {t_cur:6.3} seconds"
+            f"Epoch {epoch}: Average loss {test_loss:10.3e}, Accuracy {test_acc:5.2f}%, Time {t_cur:6.3f} seconds"
         )
 
     return timestamps, loss_values, acc_values
