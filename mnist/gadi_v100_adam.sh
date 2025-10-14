@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -q gpuvolta
 #PBS -j oe
-#PBS -l walltime=00:30:00,mem=120GB
+#PBS -l walltime=01:00:00,mem=120GB
 #PBS -l wd
 #PBS -l ncpus=24
 #PBS -l ngpus=2
@@ -10,6 +10,15 @@
 #PBS -m abe
 #
 
-# adam
-legate --gpus 1 mnist/bench.py --optim adam --batch_size 1024 --lr 0.01 --epochs 60 \
-    --out mnist/results/adam_32.csv
+WORKDIR=./mnist/
+RESULTDIR=$WORKDIR/results
+
+# Configure benchmark
+BATCH_SIZE=4096
+LEARNING_RATE=0.005
+EPOCHS=60
+RESULT_NAME=adam_$BATCH_SIZE.csv
+
+legate --gpus 1 $WORKDIR/bench.py --optim adam \
+    --batch_size $BATCH_SIZE --lr $LEARNING_RATE --epochs $EPOCHS \
+    --out $RESULTDIR/adam_32.csv

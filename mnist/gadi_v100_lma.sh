@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -q gpuvolta
 #PBS -j oe
-#PBS -l walltime=00:30:00,mem=120GB
+#PBS -l walltime=01:00:00,mem=120GB
 #PBS -l wd
 #PBS -l ncpus=24
 #PBS -l ngpus=2
@@ -10,6 +10,16 @@
 #PBS -m abe
 #
 
-# lma
-legate --gpus 1 mnist/bench.py --optim lma --batch_size 1024 --lr 0.1 --slice_size 256 --epochs 2 \
-    --out mnist/results/lma_32.csv
+WORKDIR=./mnist/
+RESULTDIR=$WORKDIR/results
+
+# Configure benchmark
+BATCH_SIZE=4096
+SLICE_SIZE=1024
+LEARNING_RATE=0.005
+EPOCHS=5
+RESULT_NAME=lma_$BATCH_SIZE.csv
+
+legate --gpus 1 $WORKDIR/bench.py --optim lma \
+    --batch_size $BATCH_SIZE --lr $LEARNING_RATE --slice_size $SLICE_SIZE --epochs $EPOCHS \
+    --out $RESULTDIR/$RESULT_NAME
