@@ -16,11 +16,12 @@ RESULTDIR=$WORKDIR/results
 # Configure benchmark
 BATCH_START=256
 BATCH_END=8192
+BATCH_SLOPE=1.5
 SLICE_SIZE=1024
 LEARNING_RATE=0.005
 EPOCHS=10
 RESULT_NAME=lma_{$BATCH_START}_{$BATCH_END}.csv
 
 legate --gpus 1 $WORKDIR/bench.py \
-    --batch-start $BATCH_START --batch-end $BATCH_END --slice-size $SLICE_SIZE --epochs $EPOCHS \
+    --batch-start $BATCH_START --batch-end $BATCH_END --batch-slope=$BATCH_SLOPE --slice-size $SLICE_SIZE --epochs $EPOCHS \
     -o $RESULTDIR/$RESULT_NAME

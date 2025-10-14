@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import ToTensor
 from cupylma import get_available_gpus, LMA
 from argparse import ArgumentParser
-from time import perf_counter
 from legate.timing import time
 from legate.core import get_machine, TaskTarget
 
@@ -60,15 +59,25 @@ def test(model, test_loader, device):
 
 
 def train_with_lma(
-    model, train_loader, test_loader, num_epochs, lr, slice_size, devices
+    model,
+    train_dataset,
+    test_loader,
+    batch_start,
+    batch_end,
+    slice_size,
+    num_epochs,
+    learning_rate,
+    devices,
 ):
     # Creat the LMA optimizer
     def residual_fn(a, b):
         return torch.sqrt(torch.nn.functional.cross_entropy(a, b, reduction="none"))
 
-    lma = LMA(model, devices, residual_fn, learning_rate=lr)
+    lma = LMA(model, devices, residual_fn, learning_rate=learning_rate)
 
     # Train
+    batch_size = batch_start
+    train_loader = get_train_loader(train_dataset, batch_size)
     timestamps, loss_values, acc_values = [], [], []
     t_all = 0
     for epoch in range(1, num_epochs + 1):
@@ -91,8 +100,13 @@ def train_with_lma(
             )
 
             if terminated:
-                print("Train is early stopped.")
-                return timestamps, loss_values, acc_values
+                batch_size = int(batch_size * batch_slope)
+                if batch_size > batch_end:
+                    printf("Batch size reaches the limit! Train terminated.")
+                    return timestamps, loss_values, acc_values
+                print(f"Batch size increases to {batch_size:,}")
+                train_loader = get_train_loader(train_dataset, batch_size)
+                break
         print()
 
     return timestamps, loss_values, acc_values
@@ -107,6 +121,9 @@ def main():
     parser.add_argument(
         "--batch-end", type=int, required=True, help="ending batch size"
     )
+    parser.add_argument(
+        "--batch-slope", type=float, required=True, help="batch size increasing slope"
+    )
     parser.add_argument("--slice-size", type=int, default=None, help="slice size")
     parser.add_argument("--epochs", type=int, default=10, help="number of epochs")
     parser.add_argument(
@@ -117,6 +134,7 @@ def main():
     args = parser.parse_args()
     batch_start = args.batch_start
     batch_end = args.batch_end
+    batch_slope = args.batch_slope
     slice_size = args.slice_size
     num_epochs = args.epochs
     lr = args.learning_rate
@@ -129,7 +147,7 @@ def main():
     test_dataset = torchvision.datasets.MNIST(
         root=".data", train=False, transform=ToTensor()
     )
-    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=1024, shuffle=False)
 
     # Build the model
     devices = get_available_gpus()
@@ -142,16 +160,29 @@ def main():
     )
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model Size: \t\t{trainable_params:,}")
-    print(f"Batch Size: \t\t{batch_size:,}")
-    print(f"Jacobian Size: \t\t{trainable_params * batch_size * 4:,} bytes")
+    print(f"Batch Size: \t\t{batch_start:,}...{batch_end:,}")
+    print(
+        f"Jacobian Size: \t\t{trainable_params * batch_start * 4:,}...{trainable_params * batch_end * 4:,} bytes"
+    )
     print()
 
     # train
+    timestamps, loss_values, acc_values = train_with_lma(
+        model,
+        train_dataset,
+        test_loader,
+        batch_start,
+        batch_end,
+        slice_size,
+        num_epochs,
+        learning_rate,
+        devices,
+    )
 
     # Write the result
-    # df = pd.DataFrame({"time": time_stamps, "loss": loss_values, "acc": acc_values})
-    # os.makedirs(os.path.dirname(outfile), exist_ok=True)
-    # df.to_csv(outfile, index=False)
+    df = pd.DataFrame({"time": time_stamps, "loss": loss_values, "acc": acc_values})
+    os.makedirs(os.path.dirname(outfile), exist_ok=True)
+    df.to_csv(outfile, index=False)
 
 
 if __name__ == "__main__":
