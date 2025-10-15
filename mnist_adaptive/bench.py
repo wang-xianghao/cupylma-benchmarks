@@ -35,7 +35,7 @@ class SimpleCNN(torch.nn.Module):
 
 
 def get_train_loader(train_dataset, batch_size):
-    train_loader = DataLoader(
+    return DataLoader(
         dataset=train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True
     )
 
@@ -64,6 +64,7 @@ def train_with_lma(
     test_loader,
     batch_start,
     batch_end,
+    batch_slope,
     slice_size,
     num_epochs,
     learning_rate,
@@ -76,9 +77,10 @@ def train_with_lma(
     lma = LMA(model, devices, residual_fn, learning_rate=learning_rate)
 
     # Train
+    decreases = 0
     batch_size = batch_start
     train_loader = get_train_loader(train_dataset, batch_size)
-    timestamps, loss_values, acc_values = [], [], []
+    timestamps, loss_values, acc_values, batches = [], [], [], []
     t_all = 0
     for epoch in range(1, num_epochs + 1):
         for idx, (x, y) in enumerate(train_loader):
@@ -93,30 +95,35 @@ def train_with_lma(
             test_loss, test_acc = test(model, test_loader, devices[0])
             loss_values.append(test_loss)
             acc_values.append(test_acc)
+            batches.append(batch_size)
+
+            if len(loss_values) > 1 and loss_values[-1] > loss_values[-2]:
+                decreases += 1
 
             # Print the result
             print(
-                f"Epoch {epoch} Batch {idx}: Average loss {test_loss:10.3e}, Accuracy {test_acc:5.2f}%, Time {t_cur:6.3} seconds"
+                f"Epoch {epoch} Batch {idx} Batch Size {batch_size}: Average loss {test_loss:10.3e}, Accuracy {test_acc:5.2f}%, Time {t_cur:6.3} seconds"
             )
 
-            if terminated:
+            if terminated or decreases > 3:
+                decreases = 0
                 batch_size = int(batch_size * batch_slope)
                 if batch_size > batch_end:
-                    printf("Batch size reaches the limit! Train terminated.")
-                    return timestamps, loss_values, acc_values
+                    print("Batch size reaches the limit! Train terminated.")
+                    return timestamps, loss_values, acc_values, batches
                 print(f"Batch size increases to {batch_size:,}")
                 train_loader = get_train_loader(train_dataset, batch_size)
                 break
         print()
 
-    return timestamps, loss_values, acc_values
+    return timestamps, loss_values, acc_values, batches
 
 
 def main():
     # Parse arguments
     parser = ArgumentParser()
     parser.add_argument(
-        "--batch-begin", type=int, required=True, help="beginning batch size"
+        "--batch-start", type=int, required=True, help="beginning batch size"
     )
     parser.add_argument(
         "--batch-end", type=int, required=True, help="ending batch size"
@@ -129,7 +136,7 @@ def main():
     parser.add_argument(
         "--learning-rate", type=float, default=0.005, help="learning rate"
     )
-    parser.add_argument("-o", type=str, require=True, help="file to store results")
+    parser.add_argument("-o", type=str, required=True, help="file to store results")
 
     args = parser.parse_args()
     batch_start = args.batch_start
@@ -137,7 +144,7 @@ def main():
     batch_slope = args.batch_slope
     slice_size = args.slice_size
     num_epochs = args.epochs
-    lr = args.learning_rate
+    learning_rate = args.learning_rate
     outfile = args.o
 
     # Prepare the dataset
@@ -153,26 +160,27 @@ def main():
     devices = get_available_gpus()
     model = SimpleCNN().to(devices[0])
 
-    print(f"Model Component (PyTorch) GPUs: \t\t\t{len(devices)}")
-    print(f"Model Component Master Device: \t\t\t{devices[0]}")
+    print(f"Model Component (PyTorch) GPUs: {len(devices)}")
+    print(f"Model Component Master Device: {devices[0]}")
     print(
-        f"Optimizer Component (cuPyNumeric) GPUs: \t\t\t{get_machine().count(TaskTarget.GPU)}"
+        f"Optimizer Component (cuPyNumeric) GPUs: {get_machine().count(TaskTarget.GPU)}"
     )
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"Model Size: \t\t{trainable_params:,}")
-    print(f"Batch Size: \t\t{batch_start:,}...{batch_end:,}")
+    print(f"Model Size: {trainable_params:,}")
+    print(f"Batch Size: {batch_start:,}...{batch_end:,}")
     print(
-        f"Jacobian Size: \t\t{trainable_params * batch_start * 4:,}...{trainable_params * batch_end * 4:,} bytes"
+        f"Jacobian Size: {trainable_params * batch_start * 4:,}...{trainable_params * batch_end * 4:,} bytes"
     )
     print()
 
     # train
-    timestamps, loss_values, acc_values = train_with_lma(
+    timestamps, loss_values, acc_values, batches = train_with_lma(
         model,
         train_dataset,
         test_loader,
         batch_start,
         batch_end,
+        batch_slope,
         slice_size,
         num_epochs,
         learning_rate,
@@ -180,7 +188,9 @@ def main():
     )
 
     # Write the result
-    df = pd.DataFrame({"time": time_stamps, "loss": loss_values, "acc": acc_values})
+    df = pd.DataFrame(
+        {"time": timestamps, "loss": loss_values, "acc": acc_values, "batch": batches}
+    )
     os.makedirs(os.path.dirname(outfile), exist_ok=True)
     df.to_csv(outfile, index=False)
 
