@@ -14,10 +14,10 @@ WORKDIR=./mnist/
 RESULTDIR=$WORKDIR/results
 
 # Configure benchmark
-BATCH_SIZE=4096
+BATCH_SIZE=2000
 SLICE_SIZE=1024
-LEARNING_RATE=0.005
-EPOCHS=5
+LEARNING_RATE=1.0
+EPOCHS=30
 RESULT_NAME=lma_$BATCH_SIZE.csv
 
 legate --gpus 1 $WORKDIR/bench.py --optim lma \
