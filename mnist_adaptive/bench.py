@@ -18,15 +18,19 @@ torch.cuda.manual_seed(0)
 class SimpleDNN(torch.nn.Module):
     def __init__(self):
         super(SimpleDNN, self).__init__()
-        self.fc1 = torch.nn.Linear(784, 1)  # 784*1 + 1 = 785 parameters
-        self.relu = torch.nn.ReLU()
-        self.fc2 = torch.nn.Linear(1, 10)  # 1*10 + 10 = 20 parameters
+        self.fc1 = torch.nn.Linear(784, 64)
+        self.relu1 = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(64, 32)
+        self.relu2 = torch.nn.ReLU()
+        self.fc3 = torch.nn.Linear(32, 10)
 
     def forward(self, x):
         x = x.view(-1, 784)  # Flatten
         x = self.fc1(x)
-        x = self.relu(x)
+        x = self.relu1(x)
         x = self.fc2(x)
+        x = self.relu2(x)
+        x = self.fc3(x)
         return x
 
 
