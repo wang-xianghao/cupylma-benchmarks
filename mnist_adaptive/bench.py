@@ -11,7 +11,8 @@ from argparse import ArgumentParser
 from legate.timing import time
 from legate.core import get_machine, TaskTarget
 
-torch.seed(0)
+torch.manual_seed(0)
+torch.cuda.manual_seed(0)
 
 # class SimpleDNN(torch.nn.Module):
 #     def __init__(self):
