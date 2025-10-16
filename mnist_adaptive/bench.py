@@ -17,7 +17,7 @@ torch.cuda.manual_seed(0)
 
 class SimpleDNN(torch.nn.Module):
     def __init__(self):
-        super(MNISTNet, self).__init__()
+        super(SimpleDNN, self).__init__()
         self.fc1 = torch.nn.Linear(784, 1)  # 784*1 + 1 = 785 parameters
         self.relu = torch.nn.ReLU()
         self.fc2 = torch.nn.Linear(1, 10)  # 1*10 + 10 = 20 parameters
