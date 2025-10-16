@@ -190,7 +190,7 @@ def main():
     if args.model == "cnn":
         model = SimpleCNN().to(devices[0])
     elif args.model == "dnn":
-        model = DNN().to(devices[0])
+        model = SimpleDNN().to(devices[0])
     else:
         print("No such a model")
         exit(0)
