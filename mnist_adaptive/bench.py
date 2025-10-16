@@ -11,6 +11,21 @@ from argparse import ArgumentParser
 from legate.timing import time
 from legate.core import get_machine, TaskTarget
 
+torch.seed(0)
+
+class class SimpleDNN(nn.Module):
+    def __init__(self):
+        super(MNISTNet, self).__init__()
+        self.fc1 = nn.Linear(784, 1)  # 784*1 + 1 = 785 parameters
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(1, 10)   # 1*10 + 10 = 20 parameters
+        
+    def forward(self, x):
+        x = x.view(-1, 784)  # Flatten
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return x
 
 class SimpleCNN(torch.nn.Module):
     def __init__(self):
@@ -123,18 +138,18 @@ def main():
     # Parse arguments
     parser = ArgumentParser()
     parser.add_argument(
-        "--batch-start", type=int, required=True, help="beginning batch size"
+        "--batch-start", type=int, default=200, required=True, help="beginning batch size"
     )
     parser.add_argument(
-        "--batch-end", type=int, required=True, help="ending batch size"
+        "--batch-end", type=int, default=60000, required=True, help="ending batch size"
     )
     parser.add_argument(
-        "--batch-slope", type=float, required=True, help="batch size increasing slope"
+        "--batch-slope", type=float, default=1.5, required=True, help="batch size increasing slope"
     )
-    parser.add_argument("--slice-size", type=int, default=None, help="slice size")
+    parser.add_argument("--slice-size", type=int, default=1024, help="slice size")
     parser.add_argument("--epochs", type=int, default=10, help="number of epochs")
     parser.add_argument(
-        "--learning-rate", type=float, default=0.005, help="learning rate"
+        "--learning-rate", type=float, default=1.0, help="learning rate"
     )
     parser.add_argument("-o", type=str, required=True, help="file to store results")
 
