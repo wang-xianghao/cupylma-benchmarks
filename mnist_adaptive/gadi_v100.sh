@@ -24,4 +24,5 @@ RESULT_NAME=lma_{$BATCH_START}_{$BATCH_END}.csv
 
 legate --gpus 1 $WORKDIR/bench.py \
     --batch-start $BATCH_START --batch-end $BATCH_END --batch-slope=$BATCH_SLOPE --slice-size $SLICE_SIZE --epochs $EPOCHS \
+    --learning-rate $LEARNING_RATE \
     -o $RESULTDIR/$RESULT_NAME

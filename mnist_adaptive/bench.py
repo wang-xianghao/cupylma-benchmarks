@@ -14,19 +14,20 @@ from legate.core import get_machine, TaskTarget
 torch.manual_seed(0)
 torch.cuda.manual_seed(0)
 
-# class SimpleDNN(torch.nn.Module):
-#     def __init__(self):
-#         super(MNISTNet, self).__init__()
-#         self.fc1 = torch.nn.Linear(784, 1)  # 784*1 + 1 = 785 parameters
-#         self.relu = torch.nn.ReLU()
-#         self.fc2 = torch.nn.Linear(1, 10)   # 1*10 + 10 = 20 parameters
 
-#     def forward(self, x):
-#         x = x.view(-1, 784)  # Flatten
-#         x = self.fc1(x)
-#         x = self.relu(x)
-#         x = self.fc2(x)
-#         return x
+class SimpleDNN(torch.nn.Module):
+    def __init__(self):
+        super(MNISTNet, self).__init__()
+        self.fc1 = torch.nn.Linear(784, 1)  # 784*1 + 1 = 785 parameters
+        self.relu = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(1, 10)  # 1*10 + 10 = 20 parameters
+
+    def forward(self, x):
+        x = x.view(-1, 784)  # Flatten
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return x
 
 
 class SimpleCNN(torch.nn.Module):
@@ -140,6 +141,9 @@ def main():
     # Parse arguments
     parser = ArgumentParser()
     parser.add_argument(
+        "--model", type=str, default="cnn", required=True, help="model selection"
+    )
+    parser.add_argument(
         "--batch-start",
         type=int,
         default=200,
@@ -183,7 +187,13 @@ def main():
 
     # Build the model
     devices = get_available_gpus()
-    model = SimpleCNN().to(devices[0])
+    if args.model == "cnn":
+        model = SimpleCNN().to(devices[0])
+    elif args.model == "dnn":
+        model = DNN().to(devices[0])
+    else:
+        print("No such a model")
+        exit(0)
 
     print(f"Model Component (PyTorch) GPUs: {len(devices)}")
     print(f"Model Component Master Device: {devices[0]}")
