@@ -32,10 +32,10 @@ def main():
         plt.plot(df["time"], df["loss"], label=label)
     plt.xlabel("Time (seconds)")
     plt.ylabel("Loss")
-    plt.title("Training Loss over Time")
+    plt.title("Loss over Time")
     plt.legend()
     plt.tight_layout()
-    plt.savefig("training_loss.png")
+    plt.savefig("loss.svg")
     plt.show()
 
     # Create second plot: time vs accuracy
@@ -45,10 +45,10 @@ def main():
         plt.plot(df["time"], df["acc"], label=label)
     plt.xlabel("Time (seconds)")
     plt.ylabel("Accuracy")
-    plt.title("Training Accuracy over Time")
+    plt.title("Accuracy over Time")
     plt.legend()
     plt.tight_layout()
-    plt.savefig("training_accuracy.png")
+    plt.savefig("accuracy.svg")
     plt.show()
 
 
